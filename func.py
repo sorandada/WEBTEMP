@@ -1,9 +1,13 @@
 import pandas as pd
-import numpy as np
 import datetime
 
-def tempfanc(csv_file, sYear, sMonth, sDay, eYear=0, eMonth=0, eDay=0):
+
+glb_ave_temp = 0
+glo_count_temp_sum = 0
+def tempfanc_df(csv_file, sYear, sMonth, sDay):
   df_temp = pd.read_csv(csv_file)
+
+  #df_temp = df_temp.iloc[::-1]
 
   l=[]
   l_d=[]
@@ -15,6 +19,7 @@ def tempfanc(csv_file, sYear, sMonth, sDay, eYear=0, eMonth=0, eDay=0):
 
   df_temp=df_temp.drop(l_d, axis=1)
 
+
   df_temp['day']  = df_temp['__time'].str.split(pat=' ', expand=True)[0]
   df_temp['time']  = df_temp['__time'].str.split(pat= ' ', expand=True)[1]
 
@@ -22,66 +27,45 @@ def tempfanc(csv_file, sYear, sMonth, sDay, eYear=0, eMonth=0, eDay=0):
 
   df_temp['day'] = pd.to_datetime(df_temp['day'])
 
-  #print(df_temp)#全部ある
 
-  #期間指定
-  if eYear==0 & eMonth==0 & eDay==0:
-      day_temp = df_temp[(df_temp['day'] == datetime.datetime(sYear, sMonth, sDay))]
-  else:
-    day_temp = df_temp[(df_temp['day']>=datetime.datetime(sYear, sMonth, sDay)) & (df_temp['day']<=datetime.datetime(eYear, eMonth, eDay))]
+  #1dayの指定
+  day_temp=df_temp[(df_temp['day'] == datetime.datetime(sYear, sMonth, sDay))]
 
-  # ここから　日にちごとのスタートからの平均温度
-  temp_sum = []
-  temp_sum_ave = []
-  inDex=[]
+  # 平均温度と平均温度の合計
   sum = 0
   count = 1
-  start = day_temp["t"].index[0]
-  end = day_temp["t"].index[-1] + 1
-
+  start = day_temp["t"].index[0] #始まりのindexの番号
+  end = day_temp["t"].index[-1] + 1 #おわりのindexの番号
 
   for i in range(start, end):
     if i == start:
-      temp_sum.append(day_temp.loc[start, "t"])
-      temp_sum_ave.append(day_temp.loc[start, "t"] / count)
       sum += day_temp.loc[start, "t"]
-      inDex.append(start)
     else:
       sum += day_temp.loc[i, "t"]
       count += 1
-      temp_sum.append(sum)
-      temp_sum_ave.append(sum / count)
-      start+=1
-      inDex.append(start)
 
-  temp_sum_ave = pd.DataFrame(temp_sum_ave)
-  temp_sum_ave = temp_sum_ave.rename(columns={0: "t_ave"})
-  inDex = pd.DataFrame(inDex)
-  inDex = inDex.rename(columns={0: "number"})
-  temp_sum_ave = pd.concat([temp_sum_ave, inDex], axis=1)
-  temp_sum_ave.set_index("number", inplace=True)
-  #print(temp_sum_ave)
 
-  day_temp = pd.concat([day_temp, temp_sum_ave], axis=1)
+  global glb_ave_temp #平均温度が上書きされる
+  glb_ave_temp =sum/count
 
-  """day_temp = day_temp.rename(columns={0: "t_ave"})"""
+  global glb_count_temp_sum  # 温度の合計が上書きされる
+  glb_count_temp_sum = sum
+
+
 
   #indexの変更
   day_temp.set_index("__time", inplace=True)
+  #時系列を直す
+  day_temp = day_temp[::-1]
+
   return day_temp
 
 
-day_temp=tempfanc('440103227943283_7.csv', 2023, 2, 1, 2023, 2, 3)
-df=pd.DataFrame(day_temp)
-print("#########")
-print(df.index.str.split(" ")[1][0])
-#print(df.index.values)
-print(len(df.index.values))
+def tempave():
+  return  glb_ave_temp
 
-ans=0
-for v in df.index.values:
-  if str("2023-02-01") in v:
-    ans+=1
-print(ans)
+def tempsumcount():
+  return  glb_count_temp_sum
+
 
 
